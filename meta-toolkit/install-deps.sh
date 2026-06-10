@@ -3,7 +3,11 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VENV_DIR="${ROOT}/.venv"
+# --- MODIFIED SECTION ---
+# Instead of putting the venv in the shared folder, we put it in a local hidden folder in home.
+PROJECT_NAME=$(basename "$ROOT")
+VENV_DIR="${HOME}/.venv_${PROJECT_NAME}"
+# ------------------------
 INSTALL_SYSTEM=false
 INSTALL_DEV=false
 
@@ -47,11 +51,12 @@ if $INSTALL_SYSTEM; then
             binutils
     else
         echo "warning: apt-get not found; skipping system package install" >&2
-        echo "         Install exiftool, mediainfo, binwalk, and strings manually." >&2
+        echo "          Install exiftool, mediainfo, binwalk, and strings manually." >&2
     fi
 fi
 
 echo "==> Creating virtual environment at ${VENV_DIR}"
+# Ensure the directory exists locally
 if [[ ! -d "$VENV_DIR" ]]; then
     python3 -m venv "$VENV_DIR"
 fi
@@ -74,6 +79,7 @@ chmod +x "${ROOT}/meta_extract"
 echo ""
 echo "Done. Activate the environment and run:"
 echo "  source ${VENV_DIR}/bin/activate"
+echo "  cd ${ROOT}"
 echo "  ./meta_extract -f /path/to/file --json"
 if $INSTALL_DEV; then
     echo "  pytest"
