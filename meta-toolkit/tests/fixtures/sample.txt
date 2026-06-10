@@ -1,0 +1,7 @@
+meta-toolkit kreuzberg integration fixture
+Document ID: MT-INTEGRATION-001
+Author: forensic-lab
+Keywords: metadata extraction, timestomping, anomaly detection
+
+This plain-text sample is used by integration tests to verify that the
+kreuzberg engine extracts readable content and metadata from text files.
