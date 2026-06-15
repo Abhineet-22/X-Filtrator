@@ -13,7 +13,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from core.orchestrator import analyze_file
-from utils.exporter import export_csv, export_json, export_txt, export_to_file
+from utils.exporter import export_json, export_txt, export_to_file
 from utils.ui_rich import render_report
 
 
@@ -73,8 +73,6 @@ def main(argv: list[str] | None = None) -> int:
     else:
         if fmt == "json":
             export_json(report)
-        elif fmt == "csv":
-            export_csv(report)
         elif fmt == "txt":
             export_txt(report)
         else:
