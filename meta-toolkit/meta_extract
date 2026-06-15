@@ -13,7 +13,7 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from core.orchestrator import analyze_file
-from utils.exporter import export_json
+from utils.exporter import export_csv, export_json, export_txt, export_to_file
 from utils.ui_rich import render_report
 
 
@@ -33,6 +33,16 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Emit the full report as JSON instead of a rich terminal layout.",
     )
+    parser.add_argument(
+        "-o",
+        "--output",
+        help="Path to write the exported report file. If omitted, output is sent to stdout.",
+    )
+    parser.add_argument(
+        "--format",
+        choices=["json", "csv", "txt"],
+        help="Select export format when writing output to a file or stdout.",
+    )
     return parser
 
 
@@ -49,10 +59,26 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: cannot read file: {exc}", file=sys.stderr)
         return 1
 
-    if args.json:
-        export_json(report)
+    # Determine output format
+    fmt = "json" if args.json else args.format
+    if args.output and not fmt:
+        suffix = Path(args.output).suffix.lower().lstrip('.')
+        fmt = suffix if suffix in {"json", "csv", "txt"} else "json"
+    if not fmt:
+        fmt = "json"
+
+    if args.output:
+        output_path = Path(args.output)
+        export_to_file(report, output_path, fmt=fmt)
     else:
-        render_report(report)
+        if fmt == "json":
+            export_json(report)
+        elif fmt == "csv":
+            export_csv(report)
+        elif fmt == "txt":
+            export_txt(report)
+        else:
+            export_json(report)
 
     return 0
 

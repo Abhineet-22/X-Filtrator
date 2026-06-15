@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-import csv
 import json
 import sys
 from pathlib import Path
 from typing import Any, TextIO
+from typing import Iterable
+
+from utils.ui_rich import _split_camel_case, _clean_sub_key
 
 
 def export_json(report: dict[str, Any], stream: TextIO | None = None) -> None:
@@ -16,52 +18,64 @@ def export_json(report: dict[str, Any], stream: TextIO | None = None) -> None:
     out.write("\n")
 
 
-def export_csv(report: dict[str, Any], stream: TextIO | None = None) -> None:
-    """Flatten top-level report fields and forensic flags into CSV rows."""
+def export_txt(report: dict[str, Any], stream: TextIO | None = None) -> None:
+    """Write a human-readable plain-text report containing all engine outputs."""
     out = stream or sys.stdout
-    writer = csv.writer(out)
+
+    def write(line: str = ""):
+        out.write(line + "\n")
+
+    write(f"File: {report.get('file', '')}")
+    write(f"MIME: {report.get('mime_type', '')}")
+    write("")
 
     stat = report.get("stat", {})
+    write("File System Stats:")
+    for k in ("size_bytes", "mtime", "atime", "ctime", "mode", "uid", "gid"):
+        write(f"  {k} : {stat.get(k, '')}")
+    write("")
+
     forensic = report.get("forensic", {})
+    write(f"Forensic: risk_level={forensic.get('risk_level', '')}  flag_count={forensic.get('flag_count', 0)}")
     flags = forensic.get("flags", [])
-    
-    # Get all engines from metadata
+    if flags:
+        write("")
+        write("Flags:")
+        for f in flags:
+            write(f"  - {f.get('rule','')} [{f.get('severity','')}] : {f.get('detail','')}")
+
+    write("")
+    write("Analysis Output:")
     metadata = report.get("metadata", {})
-    all_engines = ", ".join(metadata.keys())
+    for engine, data in metadata.items():
+        write("")
+        # write(f"--- {engine} ---")
+        if isinstance(data, dict):
+            for key, value in data.items():
+                if key in ("engine", "status"):
+                    write(f"{key} : {value}")
+                    continue
+                if isinstance(value, dict):
+                    write(f"{_split_camel_case(key)} :")
+                    for sub_k, sub_v in value.items():
+                        if not isinstance(sub_v, (dict, list)):
+                            label = _clean_sub_key(sub_k)
+                            write(f"  • {label} : {sub_v}")
+                        else:
+                            write(f"  • {sub_k} : {sub_v}")
+                elif isinstance(value, list):
+                    write(f"{_split_camel_case(key)} : {', '.join(str(x) for x in value[:10])}")
+                else:
+                    write(f"{_split_camel_case(key)} : {value}")
 
-    writer.writerow([
-        "file",
-        "mime_type",
-        "engines",
-        "size_bytes",
-        "mtime",
-        "risk_level",
-        "flag_count",
-    ])
-    writer.writerow([
-        report.get("file", ""),
-        report.get("mime_type", ""),
-        all_engines,
-        stat.get("size_bytes", ""),
-        stat.get("mtime", ""),
-        forensic.get("risk_level", ""),
-        forensic.get("flag_count", 0),
-    ])
-
-    writer.writerow([])
-    writer.writerow(["rule", "severity", "detail"])
-    for flag in flags:
-        writer.writerow([
-            flag.get("rule", ""),
-            flag.get("severity", ""),
-            flag.get("detail", ""),
-        ])
 
 
 def export_to_file(report: dict[str, Any], path: Path, fmt: str = "json") -> None:
     """Write a report to disk in the requested format."""
     with path.open("w", encoding="utf-8", newline="") as handle:
-        if fmt == "csv":
-            export_csv(report, handle)
+        # if fmt == "csv":
+        #     export_csv(report, handle)
+        if fmt in ("txt", "text"):
+            export_txt(report, handle)
         else:
             export_json(report, handle)
