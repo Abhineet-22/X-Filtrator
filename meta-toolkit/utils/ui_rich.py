@@ -3,12 +3,50 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 from datetime import datetime, timezone, timedelta
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
+
+
+def _split_camel_case(s: str) -> str:
+    """Convert camelCase and underscored strings to human-readable text."""
+    # Replace underscores with spaces
+    s = s.replace('_', ' ')
+    # Ensure a single space around any existing colons
+    s = re.sub(r'\s*:\s*', ' : ', s)
+    # Insert space before uppercase letters that follow lowercase
+    s = re.sub(r'([a-z])([A-Z])', r'\1 \2', s)
+    # Insert space before uppercase letters followed by lowercase (for sequences like 'HTTPServer')
+    s = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1 \2', s)
+    # Collapse multiple spaces
+    s = re.sub(r'\s+', ' ', s).strip()
+    return s.upper()
+
+
+def _clean_sub_key(s: str) -> str:
+    """Return a cleaned display string for sub-keys, omitting unhelpful tokens.
+
+    Removes tokens like IFD0, IFD1, SYSTEM, SUB, EXIF, and similar that add noise
+    to parameter names in the report.
+    """
+    disp = _split_camel_case(s)
+    tokens = [t for t in disp.split()]
+    cleaned: list[str] = []
+    for t in tokens:
+        # Omit IFD* tokens (IFD, IFD0, IFD1, ...)
+        if re.match(r"^IFD\d*$", t):
+            continue
+        # Omit common noisy tokens
+        if t in {"SYSTEM", "SUB", "EXIF", "SUBIFD", "EXIFIFD", "THUMBNAIL","COMPOSITE","FILE", "TOOL",":"}:
+            continue
+        cleaned.append(t)
+    result = " ".join(cleaned).strip()
+    return result if result else disp
 
 
 def render_report(report: dict[str, Any]) -> None:
@@ -20,7 +58,7 @@ def render_report(report: dict[str, Any]) -> None:
     summary.add_column("Value")
     summary.add_row("File", report.get("file", ""))
     summary.add_row("MIME", report.get("mime_type", ""))
-    summary.add_row("Engine", report.get("engine", ""))
+    # summary.add_row("Engine", report.get("engine", ""))
 
     stat = report.get("stat", {})
 
@@ -53,13 +91,13 @@ def render_report(report: dict[str, Any]) -> None:
                 return value
         return str(value)
 
-    stat_table = Table(title="Filesystem Stat", show_header=False)
+    stat_table = Table(title="File System Stats", show_header=False)
     stat_table.add_column("Field", style="bold cyan")
     stat_table.add_column("Value")
 
     # Map display labels to stat keys used elsewhere in the toolkit
     fields = [
-        ("size_bytes", "size_bytes"),
+        ("Size (bytes)", "size_bytes"),
         ("Modified", "mtime"),
         ("Accessed", "atime"),
         ("Changed", "ctime"),
@@ -119,11 +157,72 @@ def render_report(report: dict[str, Any]) -> None:
         flag_table.add_row("—", "—", "No anomalies detected")
 
     metadata = report.get("metadata", {})
-    metadata_text = _format_metadata(metadata)
+    
+    # Build formal report sections for each tool's output (styled Text)
+    report_sections: list[Text] = []
 
+    for engine_name, engine_output in metadata.items():
+        section_text = Text()
+
+        if isinstance(engine_output, dict):
+            if engine_output.get("status") == "stub":
+                section_text.append(f"No data available. ({engine_output.get('note')})")
+            else:
+                # Extract key information from the engine output
+                for key, value in engine_output.items():
+                    if key in ("status", "engine"):
+                        continue
+
+                    if isinstance(value, dict):
+                        if value:  # Non-empty dict
+                            header_text = key.replace('_', ' ').title()
+                            header_text = re.sub(r'\s*:\s*', ' : ', header_text)
+                            header_text = re.sub(r'\s+', ' ', header_text).strip()
+                            section_text.append(header_text)
+                            section_text.append("\n")
+                            for sub_key, sub_value in value.items():
+                                if not isinstance(sub_value, (dict, list)):
+                                    section_text.append("  • ")
+                                    section_text.append(_clean_sub_key(sub_key), style="cyan")
+                                    section_text.append(f" : {sub_value}")
+                                    section_text.append("\n")
+                                elif isinstance(sub_value, list) and sub_value and not isinstance(sub_value[0], (dict, list)):
+                                    section_text.append("  • ")
+                                    section_text.append(_clean_sub_key(sub_key), style="cyan")
+                                    section_text.append(f" : {', '.join(str(v) for v in sub_value)}")
+                                    section_text.append("\n")
+                    elif isinstance(value, list):
+                        if value and not isinstance(value[0], (dict, list)):
+                            list_key = key.replace('_', ' ').title()
+                            list_key = re.sub(r'\s*:\s*', ' : ', list_key)
+                            list_key = re.sub(r'\s+', ' ', list_key).strip()
+                            section_text.append("  • ")
+                            section_text.append(list_key, style="cyan")
+                            section_text.append(f" : {', '.join(str(v) for v in value[:5])}")
+                            section_text.append("\n")
+                            if len(value) > 5:
+                                section_text.append(f"    (and {len(value) - 5} more)\n")
+                    elif value not in (None, "", "ok", "stub"):
+                        val_key = key.replace('_', ' ').title()
+                        val_key = re.sub(r'\s*:\s*', ' : ', val_key)
+                        val_key = re.sub(r'\s+', ' ', val_key).strip()
+                        section_text.append("  • ")
+                        section_text.append(val_key, style="cyan")
+                        section_text.append(f" : {value}\n")
+
+        if section_text.plain.strip():
+            report_sections.append(section_text)
+
+    # Combine all sections into a single Text report
+    combined_report = Text()
+    for i, sec in enumerate(report_sections):
+        if i:
+            combined_report.append("\n\n")
+        combined_report.append(sec)
+    
     meta_panel = Panel(
-        metadata_text,
-        title=f"Engine Output ({metadata.get('status', 'unknown')})",
+        combined_report if combined_report else "Analysis complete. No additional details available.",
+        title=f"Analysis Output",
         expand=False,
     )
 

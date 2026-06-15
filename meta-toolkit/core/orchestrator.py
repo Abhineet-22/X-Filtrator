@@ -111,23 +111,28 @@ def _run_engine(engine: str, path: Path) -> dict[str, Any]:
 
 
 def analyze_file(file_path: str | os.PathLike[str]) -> dict[str, Any]:
-    """Analyze a file and return a unified metadata dictionary."""
+    """Analyze a file using all available engines and return a unified metadata dictionary."""
     path = Path(file_path).resolve()
 
     if not path.is_file():
         raise FileNotFoundError(f"Not a regular file: {path}")
 
     mime, hint = _detect_mime(path)
-    engine = _select_engine(mime, hint)
     stat = _stat_details(path)
-    engine_result = _run_engine(engine, path)
+    
+    # Run all engines and collect their results
+    all_engines = ["exiftool", "kreuzberg", "mediainfo", "stego_binwalk"]
+    metadata_results = {}
+    
+    for engine in all_engines:
+        metadata_results[engine] = _run_engine(engine, path)
 
     report: dict[str, Any] = {
         "file": str(path),
         "mime_type": mime,
-        "engine": engine,
+        "mime_hint": hint,
         "stat": stat,
-        "metadata": engine_result,
+        "metadata": metadata_results,
     }
 
     report["forensic"] = detect_anomalies(report)

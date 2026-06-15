@@ -13,19 +13,33 @@ pytestmark = pytest.mark.usefixtures("kreuzberg_available")
 
 
 class TestKreuzbergOrchestratorIntegration:
-    def test_routes_text_file_to_kreuzberg(self, sample_text_file: Path) -> None:
+    def test_runs_all_engines_on_text_file(self, sample_text_file: Path) -> None:
         report = analyze_file(sample_text_file)
 
-        assert report["engine"] == "kreuzberg"
+        # Verify basic structure
         assert report["mime_type"].startswith("text/")
-        assert report["metadata"]["engine"] == "kreuzberg"
-        assert report["metadata"]["status"] == "ok"
+        assert "metadata" in report
+        
+        # Verify all engines are present in metadata
+        assert "exiftool" in report["metadata"]
+        assert "kreuzberg" in report["metadata"]
+        assert "mediainfo" in report["metadata"]
+        assert "stego_binwalk" in report["metadata"]
+        
+        # Verify kreuzberg results specifically
+        assert report["metadata"]["kreuzberg"]["status"] == "ok"
         assert "forensic" in report
         assert "flag_count" in report["forensic"]
 
-    def test_routes_markdown_file_to_kreuzberg(self, sample_markdown_file: Path) -> None:
+    def test_runs_all_engines_on_markdown_file(self, sample_markdown_file: Path) -> None:
         report = analyze_file(sample_markdown_file)
 
-        assert report["engine"] == "kreuzberg"
-        assert report["metadata"]["status"] == "ok"
-        assert "Meta Toolkit Sample" in report["metadata"]["text_preview"]
+        # Verify all engines are present in metadata
+        assert "exiftool" in report["metadata"]
+        assert "kreuzberg" in report["metadata"]
+        assert "mediainfo" in report["metadata"]
+        assert "stego_binwalk" in report["metadata"]
+        
+        # Verify kreuzberg results specifically
+        assert report["metadata"]["kreuzberg"]["status"] == "ok"
+        assert "Meta Toolkit Sample" in report["metadata"]["kreuzberg"]["text_preview"]

@@ -24,11 +24,15 @@ def export_csv(report: dict[str, Any], stream: TextIO | None = None) -> None:
     stat = report.get("stat", {})
     forensic = report.get("forensic", {})
     flags = forensic.get("flags", [])
+    
+    # Get all engines from metadata
+    metadata = report.get("metadata", {})
+    all_engines = ", ".join(metadata.keys())
 
     writer.writerow([
         "file",
         "mime_type",
-        "engine",
+        "engines",
         "size_bytes",
         "mtime",
         "risk_level",
@@ -37,7 +41,7 @@ def export_csv(report: dict[str, Any], stream: TextIO | None = None) -> None:
     writer.writerow([
         report.get("file", ""),
         report.get("mime_type", ""),
-        report.get("engine", ""),
+        all_engines,
         stat.get("size_bytes", ""),
         stat.get("mtime", ""),
         forensic.get("risk_level", ""),
