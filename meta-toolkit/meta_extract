@@ -13,7 +13,15 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from core.orchestrator import analyze_file
-from utils.exporter import export_json, export_txt, export_to_file
+from core.batch_analyzer import analyze_directory
+
+from utils.exporter import (
+    export_json,
+    export_txt,
+    export_to_file,
+)
+
+from utils.summary_exporter import export_summary
 from utils.ui_rich import render_report
 
 
@@ -22,63 +30,161 @@ def build_parser() -> argparse.ArgumentParser:
         prog="meta_extract",
         description="Extract and forensically analyze file metadata.",
     )
-    parser.add_argument(
+
+    group = parser.add_mutually_exclusive_group(required=True)
+
+    group.add_argument(
         "-f",
         "--file",
-        required=True,
-        help="Path to the target file for analysis.",
+        help="Analyze a single file.",
     )
+
+    group.add_argument(
+        "-d",
+        "--directory",
+        help="Analyze all files in a directory recursively.",
+    )
+
     parser.add_argument(
         "--json",
         action="store_true",
-        help="Emit the full report as JSON instead of a rich terminal layout.",
+        help="Emit report as JSON.",
     )
+
     parser.add_argument(
         "-o",
         "--output",
-        help="Path to write the exported report file. If omitted, output is sent to stdout.",
+        help=(
+            "Output report path (single-file mode) "
+            "or output directory (batch mode)."
+        ),
     )
+
     parser.add_argument(
         "--format",
-        choices=["json", "csv", "txt"],
-        help="Select export format when writing output to a file or stdout.",
+        choices=["json", "txt"],
+        help="Output format.",
     )
+
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=8,
+        help="Number of concurrent workers in batch mode.",
+    )
+
     return parser
 
 
-def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+def run_batch(args) -> int:
+
+    if not args.output:
+        print(
+            "error: batch mode requires --output",
+            file=sys.stderr,
+        )
+        return 1
+
+    fmt = args.format or "json"
+
+    summary = analyze_directory(
+        input_dir=args.directory,
+        output_dir=args.output,
+        workers=args.workers,
+        fmt=fmt,
+    )
+
+    export_summary(
+        summary,
+        Path(args.output),
+    )
+
+    print()
+    print("Batch analysis complete")
+    print(f"Files discovered : {summary['total_files']}")
+    print(f"Successful       : {summary['successful']}")
+    print(f"Failed           : {summary['failed']}")
+    print(f"High risk        : {summary['high_risk']}")
+    print(f"Medium risk      : {summary['medium_risk']}")
+    print(f"Low risk         : {summary['low_risk']}")
+    print()
+    print(f"Reports written to: {args.output}")
+
+    return 0
+
+
+def run_single_file(args) -> int:
+
     target = Path(args.file)
 
     try:
         report = analyze_file(target)
+
     except FileNotFoundError as exc:
-        print(f"error: {exc}", file=sys.stderr)
-        return 1
-    except OSError as exc:
-        print(f"error: cannot read file: {exc}", file=sys.stderr)
+        print(
+            f"error: {exc}",
+            file=sys.stderr,
+        )
         return 1
 
-    # Determine output format
+    except OSError as exc:
+        print(
+            f"error: cannot read file: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+
     fmt = "json" if args.json else args.format
+
     if args.output and not fmt:
-        suffix = Path(args.output).suffix.lower().lstrip('.')
-        fmt = suffix if suffix in {"json", "csv", "txt"} else "json"
+        suffix = (
+            Path(args.output)
+            .suffix
+            .lower()
+            .lstrip(".")
+        )
+
+        fmt = (
+            suffix
+            if suffix in {"json", "txt"}
+            else "json"
+        )
+
     if not fmt:
         render_report(report)
         return 0
 
     if args.output:
+
         render_report(report)
-        output_path = Path(args.output)
-        export_to_file(report, output_path, fmt=fmt)
-    elif fmt == "json" or args.json:
-            export_json(report)
+
+        export_to_file(
+            report,
+            Path(args.output),
+            fmt=fmt,
+        )
+
+    elif fmt == "json":
+        export_json(report)
+
+    elif fmt == "txt":
+        export_txt(report)
+
     else:
-            render_report(report)
+        render_report(report)
 
     return 0
 
 
+def main(argv: list[str] | None = None) -> int:
+
+    args = build_parser().parse_args(argv)
+
+    if args.directory:
+        return run_batch(args)
+
+    return run_single_file(args)
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+        raise SystemExit(main())
