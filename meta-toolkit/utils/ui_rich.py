@@ -53,7 +53,7 @@ def render_report(report: dict[str, Any]) -> None:
     """Print a structured metadata report to the terminal."""
     console = Console()
 
-    summary = Table(title="File Summary", show_header=False)
+    summary = Table(title="File Summary", show_header=False, border_style="bold magenta")
     summary.add_column("Field", style="bold cyan")
     summary.add_column("Value")
     summary.add_row("File", report.get("file", ""))
@@ -91,7 +91,7 @@ def render_report(report: dict[str, Any]) -> None:
                 return value
         return str(value)
 
-    stat_table = Table(title="File System Stats", show_header=False)
+    stat_table = Table(title="File System Stats", show_header=False, border_style="bold magenta")
     stat_table.add_column("Field", style="bold cyan")
     stat_table.add_column("Value")
 
@@ -142,7 +142,7 @@ def render_report(report: dict[str, Any]) -> None:
 
     forensic = report.get("forensic", {})
     flags = forensic.get("flags", [])
-    flag_table = Table(title=f"Forensic Flags ({forensic.get('risk_level', 'none')})")
+    flag_table = Table(title=f"Forensic Flags ({forensic.get('risk_level', 'none')})", border_style="bold magenta")
     flag_table.add_column("Rule")
     flag_table.add_column("Severity")
     flag_table.add_column("Detail")
@@ -224,6 +224,7 @@ def render_report(report: dict[str, Any]) -> None:
         combined_report if combined_report else "Analysis complete. No additional details available.",
         title=f"Analysis Output",
         expand=False,
+        border_style="bold magenta"
     )
 
     console.print(summary)

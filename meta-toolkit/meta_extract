@@ -65,18 +65,17 @@ def main(argv: list[str] | None = None) -> int:
         suffix = Path(args.output).suffix.lower().lstrip('.')
         fmt = suffix if suffix in {"json", "csv", "txt"} else "json"
     if not fmt:
-        fmt = "json"
+        render_report(report)
+        return 0
 
     if args.output:
+        render_report(report)
         output_path = Path(args.output)
         export_to_file(report, output_path, fmt=fmt)
+    elif fmt == "json" or args.json:
+            export_json(report)
     else:
-        if fmt == "json":
-            export_json(report)
-        elif fmt == "txt":
-            export_txt(report)
-        else:
-            export_json(report)
+            render_report(report)
 
     return 0
 
