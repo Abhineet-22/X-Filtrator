@@ -5,6 +5,7 @@ from __future__ import annotations
 import mimetypes
 import os
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Any
 
@@ -66,9 +67,9 @@ def _stat_details(path: Path) -> dict[str, Any]:
         "uid": st.st_uid,
         "gid": st.st_gid,
         "nlink": st.st_nlink,
-        "atime": datetime.fromtimestamp(st.st_atime, tz=timezone.utc).isoformat(),
-        "mtime": datetime.fromtimestamp(st.st_mtime, tz=timezone.utc).isoformat(),
-        "ctime": datetime.fromtimestamp(st.st_ctime, tz=timezone.utc).isoformat(),
+        "Accessed at": datetime.fromtimestamp(st.st_atime, tz=timezone.utc).astimezone(ZoneInfo("Asia/Kolkata")).strftime(f"%Y-%m-%d %H:%M:%S"),
+        "Modified at": datetime.fromtimestamp(st.st_mtime, tz=timezone.utc).astimezone(ZoneInfo("Asia/Kolkata")).strftime(f"%Y-%m-%d %H:%M:%S"),
+        "Created at": datetime.fromtimestamp(st.st_ctime, tz=timezone.utc).astimezone(ZoneInfo("Asia/Kolkata")).strftime(f"%Y-%m-%d %H:%M:%S"),
     }
 
 

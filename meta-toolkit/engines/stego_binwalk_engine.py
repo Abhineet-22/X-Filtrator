@@ -9,13 +9,13 @@ from pathlib import Path
 from typing import Any
 
 
-def _run_strings(path: Path, limit: int = 20) -> list[str]:
+def _run_strings(path: Path) -> list[str]:
     binary = shutil.which("strings")
     if not binary:
         return []
 
     proc = subprocess.run(
-        [binary, "-n", "8", str(path)],
+        [binary,"-n","8", str(path)],
         capture_output=True,
         text=True,
         check=False,
@@ -32,8 +32,8 @@ def _run_strings(path: Path, limit: int = 20) -> list[str]:
         if line not in seen:
             seen.add(line)
             unique.append(line)
-        if len(unique) >= limit:
-            break
+        # if len(unique) >= limit:
+        #     break
     return unique
 
 

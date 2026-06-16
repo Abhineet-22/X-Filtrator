@@ -36,6 +36,8 @@ def extract(path: Path) -> dict[str, Any]:
                 "tracks": [],
             }
         payload = json.loads(proc.stdout)
+        # print(json.dumps(payload))
+        # print(proc.stdout)
         media = payload.get("media", {})
         tracks = media.get("track", [])
         if isinstance(tracks, dict):
@@ -43,6 +45,7 @@ def extract(path: Path) -> dict[str, Any]:
         return {
             "engine": "mediainfo",
             "status": "ok",
+            # "output": proc.stdout.strip(),
             "tracks": tracks,
         }
     except (subprocess.TimeoutExpired, json.JSONDecodeError) as exc:

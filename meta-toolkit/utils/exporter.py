@@ -18,56 +18,292 @@ def export_json(report: dict[str, Any], stream: TextIO | None = None) -> None:
     out.write("\n")
 
 
-def export_txt(report: dict[str, Any], stream: TextIO | None = None) -> None:
-    """Write a human-readable plain-text report containing all engine outputs."""
+def export_txt(
+    report: dict[str, Any],
+    stream: TextIO | None = None,
+) -> None:
+    """
+    Export a human-readable forensic report.
+
+    Mirrors the Rich terminal layout as closely as possible.
+    """
+
     out = stream or sys.stdout
 
-    def write(line: str = ""):
+    def write(line: str = "") -> None:
         out.write(line + "\n")
 
-    write(f"File: {report.get('file', '')}")
-    write(f"MIME: {report.get('mime_type', '')}")
-    write("")
+    def divider(
+        title: str,
+        width: int = 80,
+    ) -> None:
 
-    stat = report.get("stat", {})
-    write("File System Stats:")
-    for k in ("size_bytes", "mtime", "atime", "ctime", "mode", "uid", "gid"):
-        write(f"  {k} : {stat.get(k, '')}")
-    write("")
+        title = f" {title} "
 
-    forensic = report.get("forensic", {})
-    write(f"Forensic: risk_level={forensic.get('risk_level', '')}  flag_count={forensic.get('flag_count', 0)}")
-    flags = forensic.get("flags", [])
-    if flags:
-        write("")
-        write("Flags:")
-        for f in flags:
-            write(f"  - {f.get('rule','')} [{f.get('severity','')}] : {f.get('detail','')}")
+        remaining = max(
+            0,
+            width - len(title),
+        )
 
-    write("")
-    write("Analysis Output:")
-    metadata = report.get("metadata", {})
-    for engine, data in metadata.items():
-        write("")
-        # write(f"--- {engine} ---")
-        if isinstance(data, dict):
-            for key, value in data.items():
-                if key in ("engine", "status"):
-                    write(f"{key} : {value}")
-                    continue
-                if isinstance(value, dict):
-                    write(f"{_split_camel_case(key)} :")
-                    for sub_k, sub_v in value.items():
-                        if not isinstance(sub_v, (dict, list)):
-                            label = _clean_sub_key(sub_k)
-                            write(f"  • {label} : {sub_v}")
-                        else:
-                            write(f"  • {sub_k} : {sub_v}")
-                elif isinstance(value, list):
-                    write(f"{_split_camel_case(key)} : {', '.join(str(x) for x in value[:10])}")
+        left = remaining // 2
+        right = remaining - left
+
+        write(
+            "=" * left
+            + title
+            + "=" * right
+        )
+
+    def render_nested(
+        value: Any,
+        indent: int = 0,
+    ) -> None:
+
+        prefix = "  " * indent
+
+        if isinstance(value, dict):
+
+            for k, v in value.items():
+
+                label = _clean_sub_key(
+                    str(k)
+                )
+
+                if isinstance(
+                    v,
+                    (dict, list),
+                ):
+
+                    write(
+                        f"{prefix}- {label}"
+                    )
+
+                    render_nested(
+                        v,
+                        indent + 1,
+                    )
+
                 else:
-                    write(f"{_split_camel_case(key)} : {value}")
 
+                    write(
+                        f"{prefix}- {label} : {v}"
+                    )
+
+        elif isinstance(value, list):
+
+            if not value:
+                write(
+                    f"{prefix}(empty)"
+                )
+                return
+
+            for item in value:
+
+                if isinstance(
+                    item,
+                    (dict, list),
+                ):
+
+                    render_nested(
+                        item,
+                        indent + 1,
+                    )
+
+                else:
+
+                    write(
+                        f"{prefix}- {item}"
+                    )
+
+        else:
+
+            write(
+                f"{prefix}{value}"
+            )
+
+    # --------------------------------------------------
+    # FILE SUMMARY
+    # --------------------------------------------------
+
+    divider("FILE SUMMARY")
+
+    write(
+        f"File : {report.get('file', '')}"
+    )
+
+    write(
+        f"MIME : {report.get('mime_type', '')}"
+    )
+
+    write()
+
+    # --------------------------------------------------
+    # FILE SYSTEM
+    # --------------------------------------------------
+
+    divider("FILE SYSTEM STATS")
+
+    stat = report.get(
+        "stat",
+        {},
+    )
+
+    stat_fields = [
+        ("Size (bytes)", "size_bytes"),
+        ("Modified", "Modified at"),
+        ("Accessed", "Accessed at"),
+        ("Changed", "Created at"),
+        ("Mode", "mode"),
+        ("UID", "uid"),
+        ("GID", "gid"),
+        ("Inode", "inode"),
+    ]
+
+    for label, key in stat_fields:
+
+        write(
+            f"{label:<15} : {stat.get(key, '')}"
+        )
+
+    write()
+
+    # --------------------------------------------------
+    # FORENSICS
+    # --------------------------------------------------
+
+    forensic = report.get(
+        "forensic",
+        {},
+    )
+
+    divider(
+        f"FORENSIC FLAGS ({forensic.get('risk_level', 'none').upper()})"
+    )
+
+    flags = forensic.get(
+        "flags",
+        [],
+    )
+
+    if not flags:
+
+        write(
+            "No anomalies detected."
+        )
+
+    else:
+
+        for flag in flags:
+
+            write(
+                f"[{flag.get('severity','')}] "
+                f"{flag.get('rule','')}"
+            )
+
+            write(
+                f"  {flag.get('detail','')}"
+            )
+
+            write()
+
+    write()
+
+    # --------------------------------------------------
+    # ENGINE OUTPUTS
+    # --------------------------------------------------
+
+    metadata = report.get(
+        "metadata",
+        {},
+    )
+
+    engine_titles: dict[str, Any] = {
+        "exiftool": "EXIFTOOL",
+        "kreuzberg": "KREUZBERG",
+        "mediainfo": "MEDIAINFO",
+        "stego_binwalk": "STEGO / BINWALK",
+    }
+
+    for engine_name, engine_output in metadata.items():
+
+        divider(engine_titles.get(engine_name,engine_name.upper()))
+
+        if not isinstance(
+            engine_output,
+            dict,
+        ):
+
+            write(
+                str(engine_output)
+            )
+
+            write()
+            continue
+
+        status = engine_output.get(
+            "status"
+        )
+
+        if status == "stub":
+
+            write(
+                f"Unavailable: "
+                f"{engine_output.get('note', '')}"
+            )
+
+            write()
+            continue
+
+        if status == "error":
+
+            write(
+                f"ERROR: "
+                f"{engine_output.get('error', '')}"
+            )
+
+            write()
+            continue
+
+        for key, value in engine_output.items():
+
+            if key in (
+                "engine",
+                "status",
+            ):
+                continue
+
+            header = (
+                key.replace(
+                    "_",
+                    " ",
+                )
+                .upper()
+            )
+
+            write(
+                f"\n{header}"
+            )
+
+            write(
+                "-" * len(header)
+            )
+
+            # MediaInfo is plain text
+            if (
+                engine_name
+                == "mediainfo"
+                and isinstance(
+                    value,
+                    str,
+                )
+            ):
+
+                write(value)
+                continue
+
+            render_nested(value)
+
+        write()
 
 
 def export_to_file(report: dict[str, Any], path: Path, fmt: str = "json") -> None:

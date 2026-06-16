@@ -50,6 +50,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Emit report as JSON.",
     )
+    parser.add_argument(
+        "--txt",
+        action="store_true",
+        help="Emit report as plain text.",
+    )
 
     parser.add_argument(
         "-o",
@@ -85,7 +90,7 @@ def run_batch(args) -> int:
         )
         return 1
 
-    fmt = args.format or "json"
+    fmt = args.format or "txt"
 
     summary = analyze_directory(
         input_dir=args.directory,
@@ -169,6 +174,9 @@ def run_single_file(args) -> int:
 
     elif fmt == "txt":
         export_txt(report)
+    
+    elif not fmt:
+        render_report(report)
 
     else:
         render_report(report)
