@@ -51,6 +51,7 @@ def extract(path: Path) -> dict[str, Any]:
             "table_count": len(getattr(result, "tables", []) or []),
         }
     except Exception as exc:  # noqa: BLE001
+        # print(f"[KREUZBERG ERROR] {exc}")
         return {
             "engine": "kreuzberg",
             "status": "error",
