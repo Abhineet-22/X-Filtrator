@@ -1,5 +1,0 @@
-file,mime_type,engines,size_bytes,mtime,risk_level,flag_count
-/media/sf_my_vm/testing/images/dng/3.dng,application/octet-stream,"exiftool, kreuzberg, mediainfo, stego_binwalk",6372698,2026-06-15T06:34:06.168982+00:00,low,1
-
-rule,severity,detail
-identical_ctime_mtime,low,ctime and mtime are within 1 second
