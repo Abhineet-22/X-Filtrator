@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 
-def _run_strings(path: Path) -> list[str]:
+def _run_strings(path: Path,limit:int=20) -> list[str]:
     binary = shutil.which("strings")
     if not binary:
         return []
@@ -32,8 +32,8 @@ def _run_strings(path: Path) -> list[str]:
         if line not in seen:
             seen.add(line)
             unique.append(line)
-        # if len(unique) >= limit:
-        #     break
+        if len(unique) >= limit:
+            break
     return unique
 
 

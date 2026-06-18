@@ -77,6 +77,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=8,
         help="Number of concurrent workers in batch mode.",
     )
+    parser.add_argument(
+    "--ai",
+    action="store_true",
+    help="Generate AI-assisted analysis",
+    )
 
     return parser
 
@@ -97,6 +102,7 @@ def run_batch(args) -> int:
         output_dir=args.output,
         workers=args.workers,
         fmt=fmt,
+        enable_ai=args.ai,
     )
 
     export_summary(
@@ -123,7 +129,7 @@ def run_single_file(args) -> int:
     target = Path(args.file)
 
     try:
-        report = analyze_file(target)
+        report = analyze_file(target, enable_ai=args.ai)
 
     except FileNotFoundError as exc:
         print(

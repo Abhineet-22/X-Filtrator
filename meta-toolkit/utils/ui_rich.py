@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from pyexpat import model
 import re
 from typing import Any
 
@@ -267,10 +268,90 @@ def render_report(
     console.print(stat_table)
     console.print(flag_table)
 
-    metadata = report.get(
-        "metadata",
-        {},
+    ai = report.get(
+    "ai_analysis",
+    {},
     )
+
+    strings_ai = ai.get(
+        "strings"
+    )
+    metadata= {}
+
+    if strings_ai:
+
+        body = Text()
+
+        body.append(
+            f"Risk Level : "
+            f"{strings_ai.get('risk_level', 'unknown')}\n\n",
+            style="bold yellow",
+        )
+
+        body.append(
+            "Summary\n",
+            style="bold green",
+        )
+
+        body.append(
+            strings_ai.get(
+                "summary",
+                "No summary available.",
+            )
+        )
+
+        body.append("\n\n")
+
+        indicators = strings_ai.get(
+            "suspicious_indicators",
+            [],
+        )
+
+        if indicators:
+
+            body.append(
+                "Indicators\n",
+                style="bold red",
+            )
+
+            for item in indicators:
+
+                body.append(
+                    f"• {item}\n"
+                )
+
+            body.append("\n")
+
+        notes = strings_ai.get(
+            "investigator_notes",
+            [],
+        )
+
+        if notes:
+
+            body.append(
+                "Investigator Notes\n",
+                style="bold cyan",
+            )
+
+            for note in notes:
+
+                body.append(
+                    f"• {note}\n"
+                )
+
+        console.print(
+            Panel(
+                body,
+                title="AI STRINGS ANALYSIS",
+                border_style="bright_blue",
+            )
+        )
+
+        metadata = report.get(
+            "metadata",
+            {},
+        )
 
     engine_titles = {
         "exiftool": "EXIFTOOL",
@@ -282,6 +363,16 @@ def render_report(
     for engine_name, engine_output in metadata.items():
 
         body = Text()
+        model = strings_ai.get("model", "unknown")
+        inference_time = strings_ai.get("inference_time")
+
+        if inference_time is not None:
+
+            body.append(
+                f"Model : {model}\n"
+                f"Inference Time : {inference_time:.2f} seconds\n\n",
+                style="bold cyan",
+            )
 
         title = engine_titles.get(
             engine_name,

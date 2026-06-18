@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+from os import write
+from pyexpat import model
 import sys
 from pathlib import Path
 from typing import Any, TextIO
@@ -208,6 +210,84 @@ def export_txt(
 
     write()
 
+    ai = report.get(
+    "ai_analysis",
+    {},
+    )
+
+    strings_ai = ai.get(
+        "strings"
+    )
+
+    if strings_ai:
+
+        divider(
+            "AI STRINGS ANALYSIS"
+        )
+        model = strings_ai.get("model")
+        inference_time = strings_ai.get("inference_time")
+
+        if model:
+            write(f"Model : {model}")
+
+        if inference_time is not None:
+            write(
+                f"Inference Time : "
+                f"{inference_time:.2f} seconds"
+            )
+
+        write()
+
+        write(
+            f"Risk Level : "
+            f"{strings_ai.get('risk_level', 'unknown')}"
+        )
+
+        write()
+
+        write("SUMMARY")
+        write("-------")
+
+        write(
+            strings_ai.get(
+                "summary",
+                "No summary available."
+            )
+        )
+
+        write()
+
+        indicators = strings_ai.get(
+            "suspicious_indicators",
+            [],
+        )
+
+        if indicators:
+
+            write("INDICATORS")
+            write("----------")
+
+            for item in indicators:
+
+                write(f"- {item}")
+
+            write()
+
+        notes = strings_ai.get(
+            "investigator_notes",
+            [],
+        )
+
+        if notes:
+
+            write("INVESTIGATOR NOTES")
+            write("------------------")
+
+            for note in notes:
+
+                write(f"- {note}")
+
+            write()
     # --------------------------------------------------
     # ENGINE OUTPUTS
     # --------------------------------------------------

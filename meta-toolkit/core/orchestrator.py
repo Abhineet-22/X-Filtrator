@@ -14,6 +14,7 @@ from engines.kreuzberg_engine import extract as extract_kreuzberg
 from engines.mediainfo_engine import extract as extract_mediainfo
 from engines.stego_binwalk_engine import extract as extract_stego
 from forensic.anomaly_detector import detect_anomalies
+from engines.ai_strings_engine import analyze as analyze
 
 # Common file signatures for fallback MIME detection.
 _MAGIC_SIGNATURES: list[tuple[bytes, str, str]] = [
@@ -111,7 +112,7 @@ def _run_engine(engine: str, path: Path) -> dict[str, Any]:
     return handler(path)
 
 
-def analyze_file(file_path: str | os.PathLike[str]) -> dict[str, Any]:
+def analyze_file(file_path: str | os.PathLike[str], enable_ai: bool = False) -> dict[str, Any]:
     """Analyze a file using all available engines and return a unified metadata dictionary."""
     path = Path(file_path).resolve()
 
@@ -128,13 +129,43 @@ def analyze_file(file_path: str | os.PathLike[str]) -> dict[str, Any]:
     for engine in all_engines:
         metadata_results[engine] = _run_engine(engine, path)
 
+    ai_analysis: dict[str, Any] = {}
+
+    if enable_ai:
+
+        strings_hits = (
+            metadata_results
+            .get("stego_binwalk", {})
+            .get("strings", [])
+        )
+
+        try:
+
+            result = analyze(strings_hits)
+
+            # print("\n===== AI RESULT =====")
+            # print(result)
+            # print(type(result))
+            # print("=====================\n")
+
+            ai_analysis["strings"] = result
+
+        except Exception as exc:
+
+            ai_analysis["strings"] = {
+                "engine": "ai_strings",
+                "status": "error",
+                "error": str(exc),
+            }
     report: dict[str, Any] = {
-        "file": str(path),
-        "mime_type": mime,
-        "mime_hint": hint,
-        "stat": stat,
-        "metadata": metadata_results,
-    }
+        
+    "file": str(path),
+    "mime_type": mime,
+    "mime_hint": hint,
+    "stat": stat,
+    "metadata": metadata_results,
+    "ai_analysis": ai_analysis,
+}
 
     report["forensic"] = detect_anomalies(report)
     return report

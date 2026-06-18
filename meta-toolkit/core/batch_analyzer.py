@@ -24,9 +24,10 @@ def process_file(
     input_root: Path,
     output_root: Path,
     fmt: str,
+    enable_ai: bool = False,
 ) -> dict[str, Any]:
 
-    report = analyze_file(file_path)
+    report = analyze_file(file_path, enable_ai=enable_ai)
 
     relative = file_path.relative_to(input_root)
 
@@ -63,6 +64,7 @@ def analyze_directory(
     output_dir: str,
     workers: int = 8,
     fmt: str = "json",
+    enable_ai: bool = False,
 ) -> dict[str, Any]:
 
     input_root = Path(input_dir).resolve()
@@ -97,6 +99,7 @@ def analyze_directory(
                 input_root,
                 output_root,
                 fmt,
+                enable_ai,
             ): file_path
             for file_path in files
         }
