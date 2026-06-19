@@ -90,7 +90,7 @@ def analyze(
             "prompt": prompt,
             "format": "json",
             "stream": False,
-        },timeout=180
+        },timeout=1800
     )
 
     # print("STATUS:", response.status_code)
