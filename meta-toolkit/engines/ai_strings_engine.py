@@ -1,22 +1,10 @@
 from __future__ import annotations
 
 import json
-import os
-import subprocess
-from pathlib import Path
-import shutil
-from unittest import result
-import requests
-from typing import Any
 import time
+from typing import Any
 
-
-OLLAMA_URL = os.getenv(
-    "OLLAMA_URL",
-    "http://10.0.2.2:11434/api/generate"
-)
-
-MODEL = "qwen3:8b"
+from engines.ai_provider import generate
 
 
 PROMPT_TEMPLATE = """
@@ -56,8 +44,6 @@ Schema:
   "investigator_notes": []
 }}
 
-format : json
-
 Strings:
 
 {strings}
@@ -67,9 +53,11 @@ Strings:
 def analyze(
     strings: list[str],
 ) -> dict[str, Any]:
+
     start_time = time.perf_counter()
 
     if not strings:
+
         return {
             "engine": "ai_strings",
             "status": "empty",
@@ -82,48 +70,63 @@ def analyze(
     prompt = PROMPT_TEMPLATE.format(
         strings=strings_blob
     )
+    provider_response: dict[str, Any] = {}
 
-    response = requests.post(
-        OLLAMA_URL,
-        json={
-            "model": MODEL,
-            "prompt": prompt,
-            "format": "json",
-            "stream": False,
-        },timeout=1800
-    )
-
-    # print("STATUS:", response.status_code)
-
-    # print("RAW RESPONSE:")
-    # print(response.text)
-
-    response.raise_for_status()
-
-    # raw = response.json()["response"]
-
-    # print("MODEL OUTPUT:")
-    # return raw
-
-    raw = response.json()["response"]
-
-    elapsed = time.perf_counter() - start_time
+    raw = ""
 
     try:
+
+        provider_response = generate(
+            prompt
+        )
+
+        raw = provider_response["text"]
 
         result = json.loads(raw)
 
         result["engine"] = "ai_strings"
         result["status"] = "ok"
-        result["model"] = MODEL
-        result["inference_time"] = round(elapsed, 2)
+
+        result["provider"] = (
+            provider_response["provider"]
+        )
+
+        result["model"] = (
+            provider_response["model"]
+        )
+
+        result["strings_analyzed"] = (
+            len(strings)
+        )
+
+        result["inference_time"] = round(
+            time.perf_counter() - start_time,
+            2,
+        )
 
         return result
 
-    except Exception:
+    except json.JSONDecodeError as exc:
 
         return {
             "engine": "ai_strings",
             "status": "parse_error",
-            "raw_response": raw,
+            "error": str(exc),
+            "provider": provider_response.get(
+                "provider",
+                "unknown",
+            ) if "provider_response" in locals() else "unknown",
+            "model": provider_response.get(
+                "model",
+                "unknown",
+            ) if "provider_response" in locals() else "unknown",
+            "raw_response": raw if "raw" in locals() else "",
+        }
+
+    except Exception as exc:
+
+        return {
+            "engine": "ai_strings",
+            "status": "error",
+            "error": str(exc),
         }
