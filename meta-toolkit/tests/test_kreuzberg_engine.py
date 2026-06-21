@@ -8,12 +8,21 @@ import pytest
 from kreuzberg import extract_file_sync
 
 from engines.kreuzberg_engine import extract
+from engines.kreuzberg_engine import _non_leak_stderr_lines
 
 
 pytestmark = pytest.mark.usefixtures("kreuzberg_available")
 
 
 class TestKreuzbergEngineIntegration:
+    def test_filters_known_tesseract_leak_warnings(self) -> None:
+        stderr_text = """ObjectCache(0x1)::~ObjectCache(): WARNING! LEAK! object 0x2 still has count 1 (id /usr/share/tesseract-ocr/5/tessdata/eng.traineddatalstm-punc-dawg)
+real warning line
+ObjectCache(0x3)::~ObjectCache(): WARNING! LEAK! object 0x4 still has count 1 (id /usr/share/tesseract-ocr/5/tessdata/eng.traineddatalstm-word-dawg)
+"""
+
+        assert _non_leak_stderr_lines(stderr_text) == ["real warning line"]
+
     def test_extract_plain_text_returns_ok(self, sample_text_file: Path) -> None:
         result = extract(sample_text_file)
 
