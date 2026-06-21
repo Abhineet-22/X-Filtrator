@@ -2,12 +2,9 @@
 # Bootstrap Python and optional system dependencies for meta-toolkit.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# --- MODIFIED SECTION ---
-# Instead of putting the venv in the shared folder, we put it in a local hidden folder in home.
-PROJECT_NAME=$(basename "$ROOT")
-VENV_DIR="${HOME}/.venv_${PROJECT_NAME}"
-# ------------------------
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+VENV_DIR="/root/.venv_xfiltrator"
+VENV_CONFIG_FILE="$ROOT/.venv_location"
 INSTALL_SYSTEM=false
 INSTALL_DEV=false
 
@@ -56,22 +53,32 @@ if $INSTALL_SYSTEM; then
 fi
 
 echo "==> Creating virtual environment at ${VENV_DIR}"
-# Ensure the directory exists locally
-if [[ ! -d "$VENV_DIR" ]]; then
-    python3 -m venv "$VENV_DIR"
+if [[ ! -x "${VENV_DIR}/bin/python" ]]; then
+    mkdir -p "$VENV_DIR"
+    python3 -m venv "$VENV_DIR" || {
+        echo "error: failed to create virtual environment at ${VENV_DIR}" >&2
+        exit 1
+    }
+    echo "    Created at: $VENV_DIR"
 fi
 
-# shellcheck disable=SC1091
-source "${VENV_DIR}/bin/activate"
+echo "$VENV_DIR" > "$VENV_CONFIG_FILE"
+
+if [[ ! -f "${VENV_DIR}/bin/python" ]]; then
+    echo "error: Python not found at ${VENV_DIR}/bin/python" >&2
+    echo "       venv creation may have failed" >&2
+    exit 1
+fi
 
 echo "==> Upgrading pip"
-python -m pip install --upgrade pip
+"${VENV_DIR}/bin/python" -m pip install --upgrade pip
 
 echo "==> Installing Python requirements"
+PYTHON_BIN="${VENV_DIR}/bin/python"
 if $INSTALL_DEV; then
-    pip install -r "${ROOT}/requirements-dev.txt"
+    "$PYTHON_BIN" -m pip install -r "${ROOT}/requirements-dev.txt"
 else
-    pip install -r "${ROOT}/requirements.txt"
+    "$PYTHON_BIN" -m pip install -r "${ROOT}/requirements.txt"
 fi
 
 chmod +x "${ROOT}/meta_extract"

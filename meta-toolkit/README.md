@@ -11,10 +11,10 @@ Enterprise-grade Linux CLI for metadata extraction and lightweight forensic anal
 
 Installed via `requirements.txt`:
 
-| Package   | Role                          |
-|-----------|-------------------------------|
-| `rich`    | Terminal tables and panels      |
-| `kreuzberg` | Text/PDF/document parsing   |
+| Package      |  Role                          |
+|--------------|--------------------------------|
+| `rich`       | Terminal tables and panels     |
+| `kreuzberg`  | Text/PDF/document parsing      |
 
 ### Optional system tools
 
@@ -33,34 +33,45 @@ Engines degrade to stub mode when a binary is missing. For full coverage, instal
 git clone <repo-url> meta-toolkit
 cd meta-toolkit
 
-chmod +x install-deps.sh meta_extract
+chmod +x install-deps.sh run.sh
 ./install-deps.sh
-source .venv/bin/activate
 
-./meta_extract -f /path/to/file.pdf
-./meta_extract -f /path/to/file.jpg --json
+# Analyze a single file
+./run.sh -f /path/to/file.pdf
+
+# JSON output (no manual venv activation needed!)
+./run.sh -f /path/to/file.jpg --json
+
+# Analyze a directory recursively
+./run.sh -d /path/to/directory --json -o output/
 ```
+
+**Key difference**: The `./run.sh` wrapper automatically activates the virtual environment—no need for `source .venv/bin/activate`.
 
 ## Quick start (Windows)
 
-**Command Prompt (cmd)** — use the `.bat` installer:
+> **Note:** meta-toolkit is **Linux-primary**. Windows support is available but secondary. For best results, use in a Linux VM (WSL2, VirtualBox, etc.) or native Linux.
+
+**Command Prompt (cmd)**:
 
 ```bat
 cd C:\Users\anima\Projects\meta-toolkit
 install-deps.bat --dev
 .venv\Scripts\activate.bat
 
+REM After activation, use python directly (no wrapper on Windows)
 python meta_extract -f tests\fixtures\sample.txt --json
 pytest -v
 ```
 
-**PowerShell** — use the `.ps1` installer:
+**PowerShell**:
 
 ```powershell
 cd C:\Users\anima\Projects\meta-toolkit
 powershell -ExecutionPolicy Bypass -File .\install-deps.ps1 -Dev
 .\.venv\Scripts\Activate.ps1
 
+# After activation
 python meta_extract -f tests\fixtures\sample.txt --json
 pytest -v
 ```
@@ -137,27 +148,81 @@ python -m pip install -r requirements-dev.txt
 
 ## Usage
 
-```
-usage: meta_extract [-h] -f FILE [--json]
+### Single File Analysis
+
+```bash
+usage: ./run.sh -f FILE [OPTIONS]
 
 Extract and forensically analyze file metadata.
 
-options:
-  -f, --file FILE   Path to the target file for analysis. (required)
-  --json            Emit the full report as JSON instead of a rich terminal layout.
+required arguments:
+  -f, --file FILE       Path to the target file for analysis
+
+output options:
+  --json                Emit report as JSON (default: rich terminal layout)
+  --txt                 Emit report as plain text
+  -o, --output PATH     Write report to file instead of stdout
+
+advanced options:
+  --ai                  Enable AI-powered string analysis (requires local LLM)
+```
+
+### Directory Batch Analysis
+
+```bash
+usage: ./run.sh -d DIRECTORY [OPTIONS]
+
+Analyze all files in a directory recursively.
+
+required arguments:
+  -d, --directory DIR   Path to directory (will recurse into subdirs)
+
+output options:
+  --json                Write one JSON report per file
+  --txt                 Write one TXT report per file
+  -o, --output PATH     Output directory (preserves source structure)
+
+performance options:
+  --workers N           Number of concurrent threads (default: 8)
 ```
 
 ### Examples
 
+#### Single file analysis (terminal output)
 ```bash
-# Rich terminal report (default)
-./meta_extract -f evidence/sample.png
+./run.sh -f evidence/sample.png
+./run.sh -f document.pdf
+./run.sh -f archive.zip --txt
+```
 
-# Machine-readable JSON on stdout
-./meta_extract -f evidence/archive.zip --json > report.json
+#### Single file analysis (JSON output)
+```bash
+# Write JSON to stdout
+./run.sh -f evidence/sample.png --json
 
-# Redirect JSON to a file
-./meta_extract -f document.pdf --json | tee out/report.json
+# Pipe to file
+./run.sh -f evidence/sample.png --json > report.json
+
+# Write directly with -o flag
+./run.sh -f evidence/sample.png -o report.json
+```
+
+#### AI-powered analysis
+```bash
+# Enable AI string analysis (requires local LLM via Ollama/LM Studio/vLLM)
+./run.sh -f suspicious_binary --ai --json
+```
+
+#### Batch directory processing
+```bash
+# Analyze all files, preserve directory structure, write JSON reports
+./run.sh -d /evidence/collection -o /reports --json
+
+# Use 16 concurrent workers for faster processing
+./run.sh -d /evidence/collection -o /reports --json --workers 16
+
+# Mixed format: terminal summary + individual reports
+./run.sh -d /evidence/collection -o /reports --txt
 ```
 
 ## Architecture
@@ -202,51 +267,194 @@ Reports include a summarized `risk_level`: `none`, `low`, `medium`, or `high`.
 
 ```
 meta-toolkit/
-├── meta_extract              # CLI entry point
+├── run.sh                    # Wrapper script (auto-activates venv)
+├── meta_extract              # CLI entry point (executable Python)
 ├── install-deps.sh           # Linux dependency bootstrap
 ├── install-deps.bat          # Windows installer (Command Prompt)
 ├── install-deps.ps1          # Windows installer (PowerShell)
-├── requirements.txt
-├── requirements-dev.txt      # pytest + runtime deps
+├── requirements.txt          # Runtime dependencies
+├── requirements-dev.txt      # Development deps (pytest + runtime)
 ├── pytest.ini
+├── config/
+│   └── ai.json               # AI provider configuration
 ├── core/
-│   └── orchestrator.py
+│   ├── __init__.py
+│   ├── orchestrator.py       # File analysis routing & dispatch
+│   └── batch_analyzer.py     # Concurrent directory processing
 ├── engines/
+│   ├── __init__.py
+│   ├── exiftool_engine.py    # Image EXIF/XMP extraction
+│   ├── kreuzberg_engine.py   # Text/PDF/document parsing
+│   ├── mediainfo_engine.py   # Audio/video metadata
+│   ├── stego_binwalk_engine.py  # Binary carving & strings
+│   ├── ai_strings_engine.py  # AI-powered string analysis
+│   └── ai_provider.py        # LLM auto-discovery (Ollama/LM Studio)
 ├── forensic/
-│   └── anomaly_detector.py
+│   ├── __init__.py
+│   └── anomaly_detector.py   # Tampering & timestomping rules
+├── utils/
+│   ├── __init__.py
+│   ├── config.py             # Configuration loader
+│   ├── exporter.py           # JSON/TXT report serialization
+│   ├── summary_exporter.py   # Batch summary generation
+│   ├── progress_tracker.py   # Progress reporting
+│   └── ui_rich.py            # Terminal rendering (Rich library)
 ├── tests/
-│   ├── conftest.py
-│   ├── fixtures/             # sample.txt, sample.md
+│   ├── conftest.py           # pytest fixtures
+│   ├── test_ai_engines.py    # AI integration tests
 │   ├── test_kreuzberg_engine.py
-│   └── test_kreuzberg_orchestrator.py
-└── utils/
-    ├── ui_rich.py
-    └── exporter.py
+│   ├── test_kreuzberg_orchestrator.py
+│   └── fixtures/
+│       ├── sample.txt
+│       └── sample.md
+└── README.md
 ```
 
-## Development
+## AI Integration (Optional)
+
+Meta-toolkit supports AI-powered string analysis through local LLM providers. This feature is **optional** and gracefully skipped if no provider is available.
+
+### Supported Providers
+
+| Provider | Port | Installation |
+|----------|------|---------------|
+| **Ollama** | 11434 | [ollama.ai](https://ollama.ai) |
+| **LM Studio** | 1234 | [lmstudio.ai](https://lmstudio.ai) |
+| **vLLM** | 8000 | [vllm.readthedocs.io](https://vllm.readthedocs.io) |
+
+### Setup
+
+1. **Install and start a local LLM provider** (example: Ollama)
+   ```bash
+   # Install Ollama from https://ollama.ai
+   ollama pull llama3.1:8b
+   ollama serve
+   # Listens on localhost:11434
+   ```
+
+2. **Run meta-toolkit with `--ai` flag**
+   ```bash
+   ./run.sh -f suspicious_binary --ai --json
+   ```
+
+3. **Auto-discovery**
+   - Toolkit checks localhost, VirtualBox NAT gateway, and Host-Only networks
+   - Respects `AI_HOST` environment variable: `AI_HOST=192.168.1.100 ./run.sh -f file --ai`
+   - Falls back gracefully if no provider found
+
+### Configuration
+
+Edit `config/ai.json` to customize:
+
+```json
+{
+  "ai": {
+    "enabled": true,
+    "provider": "auto",
+    "timeout": 480,
+    "preferred_models": [
+      "qwen3:8b",
+      "llama3.1:8b",
+      "llama3:8b",
+      "mistral:7b"
+    ],
+    "ports": {
+      "ollama": 11434,
+      "lmstudio": 1234,
+      "vllm": 8000
+    }
+  }
+}
+```
+
+## Forensic Rules
+
+The anomaly detector flags potential tampering:
+
+| Rule | Severity | Description |
+|------|----------|-------------|
+| `timestomping_suspect` | Medium | mtime newer than atime (suspicious access pattern) |
+| `future_mtime` | High | Modification time in the future |
+| `identical_ctime_mtime` | Low | ctime and mtime within 1 second (suspicious precision) |
+| `engine_failure` | Medium | Upstream extraction engine returned error |
+| `embedded_payloads` | High | 3+ embedded signatures detected by binwalk |
+| `metadata_rewrite_tool` | Low | EXIF software tag indicates editing tool use |
+
+Each report includes: `risk_level` (`none`, `low`, `medium`, `high`)
+
+## Development & Testing
+
+### Quick sanity check
 
 ```bash
-source .venv/bin/activate
-python meta_extract -f meta_extract --json   # smoke test
+./run.sh -f meta_extract --json   # Analyze the script itself
 ```
 
-### Testing
-
-Integration tests exercise the real `kreuzberg` library (sync API) against checked-in fixtures.
+### Running tests
 
 ```bash
 ./install-deps.sh --dev
+./run.sh -f tests/fixtures/sample.txt
+
+# Run pytest
 source .venv/bin/activate
-pytest
+pytest -v
+
+# Run specific test module
+pytest tests/test_kreuzberg_engine.py -v
 ```
 
-| Test module | Coverage |
-|-------------|----------|
-| `test_kreuzberg_engine.py` | Direct engine extraction, API parity with `extract_file_sync`, error on missing file |
-| `test_kreuzberg_orchestrator.py` | End-to-end routing of text/markdown through `analyze_file()` |
+### Test coverage
 
-Tests are skipped automatically when `kreuzberg` is not installed.
+| Module | Purpose |
+|--------|----------|
+| `test_ai_engines.py` | AI string analysis integration |
+| `test_kreuzberg_engine.py` | Direct text/PDF extraction; error handling |
+| `test_kreuzberg_orchestrator.py` | End-to-end routing through `analyze_file()` |
+
+Tests are skipped automatically when dependencies are not installed.
+
+## Troubleshooting
+
+### "Virtual environment not found" error
+
+```bash
+# The .venv directory is missing. Reinstall:
+./install-deps.sh
+./run.sh -f your_file
+```
+
+### Engines show "stub" status
+
+This is **normal** — it means an optional system tool is missing:
+
+```bash
+# Install all optional tools (Linux/Debian/Ubuntu)
+./install-deps.sh --system
+
+# Or manually
+sudo apt-get install libimage-exiftool-perl mediainfo binwalk
+```
+
+### AI analysis not working
+
+1. **Verify LLM provider is running**
+   ```bash
+   curl http://localhost:11434/api/tags  # Ollama
+   curl http://localhost:1234/api/tags   # LM Studio
+   ```
+
+2. **Check AI configuration**
+   - Verify `config/ai.json` ports match your provider
+   - Set `AI_HOST` if running on non-localhost: `AI_HOST=192.168.1.100 ./run.sh -f file --ai`
+
+3. **Disable AI if not needed**
+   - Simply omit `--ai` flag; analysis still works without it
+
+### Timeout errors on slow systems
+
+- Increase timeout in `config/ai.json` → `ai.timeout` (seconds)
+- Reduce batch concurrency: `./run.sh -d /path --workers 4`
 
 ## License
 
