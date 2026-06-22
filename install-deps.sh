@@ -84,10 +84,8 @@ fi
 chmod +x "${ROOT}/meta_extract"
 
 echo ""
-echo "Done. Activate the environment and run:"
-echo "  source ${VENV_DIR}/bin/activate"
-echo "  cd ${ROOT}"
-echo "  ./meta_extract -f /path/to/file --json"
+echo "Done. Now simply run:"
+echo "  ./run.sh -f /path/to/file [OPTIONS]"
 if $INSTALL_DEV; then
     echo "  pytest"
 fi
