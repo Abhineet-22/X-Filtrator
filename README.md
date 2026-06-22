@@ -1,4 +1,4 @@
-# Xfiltrator
+# X-Filtrator
 
 Enterprise-grade Linux CLI for metadata extraction and lightweight forensic analysis. Routes files through format-specific engines, applies anomaly rules, and renders results in the terminal or as JSON.
 
