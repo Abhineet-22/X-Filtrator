@@ -1,4 +1,4 @@
-# meta-toolkit
+# Xfiltrator
 
 Enterprise-grade Linux CLI for metadata extraction and lightweight forensic analysis. Routes files through format-specific engines, applies anomaly rules, and renders results in the terminal or as JSON.
 
@@ -11,21 +11,22 @@ Enterprise-grade Linux CLI for metadata extraction and lightweight forensic anal
 
 Installed via `requirements.txt`:
 
-| Package      |  Role                          |
-|--------------|--------------------------------|
-| `rich`       | Terminal tables and panels     |
-| `kreuzberg`  | Text/PDF/document parsing      |
+| Package      |            Role                        |
+|--------------|----------------------------------------|
+| `rich`       | Terminal tables and panels             |
+| `kreuzberg`  | Text/PDF/document parsing              |
+| `requests`   |  Send API calls and HTTP requests      |
 
-### Optional system tools
+### Required System Tools
 
 Engines degrade to stub mode when a binary is missing. For full coverage, install:
 
-| Tool        | Package (Debian/Ubuntu) | Used by              |
+| Tool        | Shell Command           | Used by              |
 |-------------|-------------------------|----------------------|
-| `exiftool`  | `libimage-exiftool-perl`| Image EXIF/XMP       |
-| `mediainfo` | `mediainfo`             | Audio/video profiling|
-| `binwalk`   | `binwalk`               | Embedded signatures  |
-| `strings`   | `binutils`              | Printable strings    |
+| `exiftool`  | `sudo apt install exiftool`| Image EXIF/XMP       |
+| `mediainfo` | `sudo apt install mediainfo`             | Audio/video profiling|
+| `binwalk`   | `sudo apt install binwalk`               | Embedded signatures  |
+| `strings`   | `sudo apt install strings`              | Printable strings    |
 
 ## Quick start (Linux)
 

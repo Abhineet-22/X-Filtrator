@@ -3,9 +3,8 @@ from __future__ import annotations
 import os
 from typing import Any
 from utils.config import get_config
-
-
 import requests
+
 
 DEFAULT_TIMEOUT = 10
 
