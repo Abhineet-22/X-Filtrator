@@ -3,14 +3,24 @@
 from __future__ import annotations
 
 import json
-# from os import write
-# from pyexpat import model
+import re
 import sys
 from pathlib import Path
 from typing import Any, TextIO
-# from typing import Iterable
 
 from utils.ui_rich import _split_camel_case, _clean_sub_key
+
+
+_TESSERACT_LEAK_PREFIX = "ObjectCache("
+
+
+def _strip_tesseract_leak_lines(text: str) -> str:
+    lines = [
+        line
+        for line in text.splitlines()
+        if line.strip() and not line.lstrip().startswith(_TESSERACT_LEAK_PREFIX)
+    ]
+    return "\n".join(lines)
 
 
 def export_json(report: dict[str, Any], stream: TextIO | None = None) -> None:
@@ -33,7 +43,7 @@ def export_txt(
     out = stream or sys.stdout
 
     def write(line: str = "") -> None:
-        out.write(line + "\n")
+        out.write(_strip_tesseract_leak_lines(line) + "\n")
 
     def divider(
         title: str,
@@ -380,6 +390,9 @@ def export_txt(
 
                 write(value)
                 continue
+
+            if isinstance(value, str):
+                value = _strip_tesseract_leak_lines(value)
 
             render_nested(value)
 

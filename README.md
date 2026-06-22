@@ -21,12 +21,12 @@ Installed via `requirements.txt`:
 
 Engines degrade to stub mode when a binary is missing. For full coverage, install:
 
-| Tool        | Shell Command           | Used by              |
-|-------------|-------------------------|----------------------|
-| `exiftool`  | `sudo apt install exiftool`| Image EXIF/XMP       |
-| `mediainfo` | `sudo apt install mediainfo`             | Audio/video profiling|
-| `binwalk`   | `sudo apt install binwalk`               | Embedded signatures  |
-| `strings`   | `sudo apt install strings`              | Printable strings    |
+| Tool        | Shell Command                             | Used by              |
+|-------------|-------------------------------------------|----------------------|
+| `exiftool`  | `sudo apt install exiftool`               | Image EXIF/XMP       |
+| `mediainfo` | `sudo apt install mediainfo`              | Audio/video profiling|
+| `binwalk`   | `sudo apt install binwalk`                | Embedded signatures  |
+| `strings`   | `sudo apt install strings`                | Printable strings    |
 
 ## Quick start (Linux)
 
@@ -53,7 +53,7 @@ chmod +x install-deps.sh run.sh
 
 > **Note:** meta-toolkit is **Linux-primary**. Windows support is available but secondary. For best results, use in a Linux VM (WSL2, VirtualBox, etc.) or native Linux.
 
-**Command Prompt (cmd)**:
+<!-- **Command Prompt (cmd)**:
 
 ```bat
 cd C:\Users\anima\Projects\meta-toolkit
@@ -79,7 +79,7 @@ pytest -v
 
 If `python` prints *"Python was not found; run without arguments to install from the Microsoft Store"*, see [Windows Python setup](#windows-python-setup) below.
 
-> **Note:** `.ps1` scripts do not run from Command Prompt by default. If `install-deps.ps1` prints nothing and `.venv` is missing, use `install-deps.bat` instead.
+> **Note:** `.ps1` scripts do not run from Command Prompt by default. If `install-deps.ps1` prints nothing and `.venv` is missing, use `install-deps.bat` instead. -->
 
 ## Install scripts
 
@@ -93,7 +93,7 @@ Creates a local virtual environment (`.venv`), upgrades `pip`, and installs Pyth
 ./install-deps.sh --system     # Python + apt packages (Debian/Ubuntu)
 ```
 
-### Windows — `install-deps.bat` (cmd) or `install-deps.ps1` (PowerShell)
+<!-- ### Windows — `install-deps.bat` (cmd) or `install-deps.ps1` (PowerShell)
 
 ```bat
 install-deps.bat               REM Python deps only
@@ -135,17 +135,17 @@ install-deps.bat --dev
 pytest -v
 ```
 
-After activation, `python` inside `.venv` always works — you do not need the global `python` command again for this project.
+After activation, `python` inside `.venv` always works — you do not need the global `python` command again for this project. -->
 
-### Python 3.14 note
+<!-- ### Python 3.14 note
 
-You have Python 3.14, which is very new. If `pip install` fails building `kreuzberg`, install **Python 3.12 or 3.13** alongside it and create the venv explicitly:
+If you have Python 3.14, which is very new and `pip install` fails building `kreuzberg`, install **Python 3.12 or 3.13** alongside it and create the venv explicitly:
 
 ```bat
 py -3.12 -m venv .venv
 .venv\Scripts\activate.bat
 python -m pip install -r requirements-dev.txt
-```
+``` -->
 
 ## Usage
 
@@ -164,7 +164,7 @@ output options:
   --txt                 Emit report as plain text
   -o, --output PATH     Write report to file instead of stdout
 
-advanced options:
+Advanced options:
   --ai                  Enable AI-powered string analysis (requires local LLM)
 ```
 
@@ -226,30 +226,6 @@ performance options:
 ./run.sh -d /evidence/collection -o /reports --txt
 ```
 
-## Architecture
-
-```
-meta_extract
-└── core/orchestrator.py
-        ├── filesystem stat (size, times, mode, uid/gid)
-        ├── MIME detection (magic bytes → mimetypes)
-        ├── engine dispatch
-        │     ├── engines/kreuzberg_engine.py    (text, PDF, documents)
-        │     ├── engines/exiftool_engine.py     (images)
-        │     ├── engines/mediainfo_engine.py    (audio/video)
-        │     └── engines/stego_binwalk_engine.py (binary carving)
-        └── forensic/anomaly_detector.py         (tampering / timestomping flags)
-                └── utils/ui_rich.py  or  utils/exporter.py
-```
-
-### Engine routing
-
-| File type signal              | Engine          |
-|-------------------------------|-----------------|
-| Images (PNG, JPEG, GIF, …)    | `exiftool`      |
-| Text, PDF, JSON, XML          | `kreuzberg`     |
-| Audio / video containers      | `mediainfo`     |
-| Unknown or binary             | `stego_binwalk` |
 
 ### Forensic flags
 
@@ -267,47 +243,39 @@ Reports include a summarized `risk_level`: `none`, `low`, `medium`, or `high`.
 ## Project layout
 
 ```
-meta-toolkit/
-├── run.sh                    # Wrapper script (auto-activates venv)
-├── meta_extract              # CLI entry point (executable Python)
-├── install-deps.sh           # Linux dependency bootstrap
-├── install-deps.bat          # Windows installer (Command Prompt)
-├── install-deps.ps1          # Windows installer (PowerShell)
-├── requirements.txt          # Runtime dependencies
-├── requirements-dev.txt      # Development deps (pytest + runtime)
+./
+├── run.sh
+├── meta_extract
+├── install-deps.sh
+├── install-deps.bat
+├── install-deps.ps1
+├── requirements.txt
+├── requirements-dev.txt
 ├── pytest.ini
 ├── config/
-│   └── ai.json               # AI provider configuration
+│   └── ai.json
 ├── core/
 │   ├── __init__.py
-│   ├── orchestrator.py       # File analysis routing & dispatch
-│   └── batch_analyzer.py     # Concurrent directory processing
+│   ├── orchestrator.py
+│   └── batch_analyzer.py
 ├── engines/
 │   ├── __init__.py
-│   ├── exiftool_engine.py    # Image EXIF/XMP extraction
-│   ├── kreuzberg_engine.py   # Text/PDF/document parsing
-│   ├── mediainfo_engine.py   # Audio/video metadata
-│   ├── stego_binwalk_engine.py  # Binary carving & strings
-│   ├── ai_strings_engine.py  # AI-powered string analysis
-│   └── ai_provider.py        # LLM auto-discovery (Ollama/LM Studio)
+│   ├── exiftool_engine.py    
+│   ├── kreuzberg_engine.py  
+│   ├── mediainfo_engine.py   
+│   ├── stego_binwalk_engine.py  
+│   ├── ai_strings_engine.py  
+│   └── ai_provider.py        
 ├── forensic/
 │   ├── __init__.py
-│   └── anomaly_detector.py   # Tampering & timestomping rules
+│   └── anomaly_detector.py
 ├── utils/
 │   ├── __init__.py
-│   ├── config.py             # Configuration loader
-│   ├── exporter.py           # JSON/TXT report serialization
-│   ├── summary_exporter.py   # Batch summary generation
-│   ├── progress_tracker.py   # Progress reporting
-│   └── ui_rich.py            # Terminal rendering (Rich library)
-├── tests/
-│   ├── conftest.py           # pytest fixtures
-│   ├── test_ai_engines.py    # AI integration tests
-│   ├── test_kreuzberg_engine.py
-│   ├── test_kreuzberg_orchestrator.py
-│   └── fixtures/
-│       ├── sample.txt
-│       └── sample.md
+│   ├── config.py            
+│   ├── exporter.py   
+│   ├── summary_exporter.py   
+│   ├── progress_tracker.py    
+│   └── ui_rich.py            
 └── README.md
 ```
 
@@ -319,9 +287,9 @@ Meta-toolkit supports AI-powered string analysis through local LLM providers. Th
 
 | Provider | Port | Installation |
 |----------|------|---------------|
-| **Ollama** | 11434 | [ollama.ai](https://ollama.ai) |
+| **Ollama** | 11434 | [ollama.ai](https://ollama.com) |
 | **LM Studio** | 1234 | [lmstudio.ai](https://lmstudio.ai) |
-| **vLLM** | 8000 | [vllm.readthedocs.io](https://vllm.readthedocs.io) |
+| **vLLM** | 8000 | [vllm.readthedocs.io](https://docs.vllm.ai/) |
 
 ### Setup
 
@@ -340,7 +308,8 @@ Meta-toolkit supports AI-powered string analysis through local LLM providers. Th
 
 3. **Auto-discovery**
    - Toolkit checks localhost, VirtualBox NAT gateway, and Host-Only networks
-   - Respects `AI_HOST` environment variable: `AI_HOST=192.168.1.100 ./run.sh -f file --ai`
+   - Respects `AI_HOST` environment variable: `export AI_HOST=192.168.1.100` 
+   - `./run.sh -f file --ai`
    - Falls back gracefully if no provider found
 
 ### Configuration
@@ -391,29 +360,6 @@ Each report includes: `risk_level` (`none`, `low`, `medium`, `high`)
 ./run.sh -f meta_extract --json   # Analyze the script itself
 ```
 
-### Running tests
-
-```bash
-./install-deps.sh --dev
-./run.sh -f tests/fixtures/sample.txt
-
-# Run pytest
-source .venv/bin/activate
-pytest -v
-
-# Run specific test module
-pytest tests/test_kreuzberg_engine.py -v
-```
-
-### Test coverage
-
-| Module | Purpose |
-|--------|----------|
-| `test_ai_engines.py` | AI string analysis integration |
-| `test_kreuzberg_engine.py` | Direct text/PDF extraction; error handling |
-| `test_kreuzberg_orchestrator.py` | End-to-end routing through `analyze_file()` |
-
-Tests are skipped automatically when dependencies are not installed.
 
 ## Troubleshooting
 
@@ -451,6 +397,26 @@ sudo apt-get install libimage-exiftool-perl mediainfo binwalk
 
 3. **Disable AI if not needed**
    - Simply omit `--ai` flag; analysis still works without it
+
+### Tesseract / Kreuzberg warning noise
+
+If you see `Error opening data file /io/.tesseract-cache/linux-x86_64/tessdata/eng.traineddata ... Tesseract couldn't load any languages!` messages from Tesseract after Kreuzberg runs, verify the tessdata location and export the parent directory as `TESSDATA_PREFIX`:
+
+```bash
+tesseract --version
+find /usr -name eng.traineddata 2>/dev/null
+export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5
+echo "$TESSDATA_PREFIX"
+nano ~/.bashrc
+```
+
+Add this line to the end of `~/.bashrc`:
+
+```bash
+export TESSDATA_PREFIX=/usr/share/tesseract-ocr/5
+```
+
+If your `find` output points somewhere else, use that parent directory instead of `/usr/share/tesseract-ocr/5`.
 
 ### Timeout errors on slow systems
 
