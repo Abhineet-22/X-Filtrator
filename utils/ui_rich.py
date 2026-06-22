@@ -2,8 +2,6 @@
 """Terminal report rendering via rich."""
 
 from __future__ import annotations
-
-from pyexpat import model
 import re
 from typing import Any
 
