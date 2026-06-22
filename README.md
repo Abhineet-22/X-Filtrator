@@ -31,8 +31,8 @@ Engines degrade to stub mode when a binary is missing. For full coverage, instal
 ## Quick start (Linux)
 
 ```bash
-git clone <repo-url> meta-toolkit
-cd meta-toolkit
+git clone <repo-url> X-Filtrator
+cd X-Filtrator
 
 chmod +x install-deps.sh run.sh
 ./install-deps.sh
@@ -51,7 +51,7 @@ chmod +x install-deps.sh run.sh
 
 ## Quick start (Windows)
 
-> **Note:** meta-toolkit is **Linux-primary**. Windows support is available but secondary. For best results, use in a Linux VM (WSL2, VirtualBox, etc.) or native Linux.
+> **Note:** X-Filtrator is **Linux-primary**. Windows support is available but secondary. For best results, use in a Linux VM (WSL2, VirtualBox, etc.) or native Linux.
 
 ## Install scripts
 
@@ -199,7 +199,7 @@ Reports include a summarized `risk_level`: `none`, `low`, `medium`, or `high`.
 
 ## AI Integration (Optional)
 
-Meta-toolkit supports AI-powered string analysis through local LLM providers. This feature is **optional** and gracefully skipped if no provider is available.
+X-Filtrator supports AI-powered string analysis through local LLM providers. This feature is **optional** and gracefully skipped if no provider is available.
 
 ### Supported Providers
 
@@ -219,7 +219,7 @@ Meta-toolkit supports AI-powered string analysis through local LLM providers. Th
    # Listens on localhost:11434
    ```
 
-2. **Run meta-toolkit with `--ai` flag**
+2. **Run X-Filtrator with `--ai` flag**
    ```bash
    ./run.sh -f suspicious_binary --ai --json
    ```
